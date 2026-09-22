@@ -1,0 +1,16 @@
+﻿# Phase 1 runtime dependencies; Python 3.11 recommended.
+# Development ranges, not a verified lock file.
+ultralytics>=8.3,<9
+lap>=0.5.12,<1
+opencv-python>=4.10,<5
+numpy>=1.26,<3
+
+# OCR with the CPU PaddlePaddle runtime.
+paddlepaddle>=3.0,<4
+paddleocr>=3.0,<4
+
+# Configuration.
+PyYAML>=6.0,<7
+python-dotenv>=1.0,<2
+
+# sqlite3, logging, pathlib, and unittest are part of Python.

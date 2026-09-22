@@ -1,0 +1,142 @@
+Video Frame
+     |
+     |
+     ↓
+YOLO Vehicle Detection
+     |
+     ↓
+ByteTrack
+     |
+     ↓
+Vehicle IDs
+     |
+     |
+     ├───────────────┐
+     ↓               ↓
+Vehicle Box     YOLO Plate Detection
+                         |
+                         ↓
+                 Plate Bounding Box
+                         |
+                         ↓
+                  IoU Matching
+                         |
+                         ↓
+              Vehicle ID + Plate Number
+                         |
+                         ↓
+                    Database
+
+So the matching is basically geometry + tracking, not AI understanding.
+
+
+######################################################################
+
+  IoU Matching
+
+Video Frame (Frame 100)
+          |
+          |
+   ┌──────┴──────┐
+   ↓             ↓
+
+YOLO Vehicle   YOLO Plate
+Detector       Detector
+
+   ↓             ↓
+
+Car Box        Plate Box
+
+[100,100,600,500]   [300,400,450,450]
+
+          |
+          ↓
+
+   is_inside(vehicle_box, plate_box)
+
+          |
+          ↓
+
+Plate belongs to Car
+
+###########################################
+ANPR_Project/
+│
+├── app/
+│   │
+│   ├── main.py                    # Application entry point
+│   │
+│   ├── config/                    # Configuration management
+│   │   ├── settings.py
+│   │   └── config.yaml
+│   │
+│   ├── core/                      # Core utilities
+│   │   ├── logger.py
+│   │   ├── exceptions.py
+│   │   └── constants.py
+│   │
+│   │
+│   ├── detection/                 # YOLO models
+│   │   ├── vehicle_detector.py
+│   │   └── plate_detector.py
+│   │
+│   │
+│   ├── tracking/                  # Object tracking
+│   │   ├── tracker.py
+│   │   └── vehicle_tracker.py
+│   │
+│   │
+│   ├── recognition/               # OCR
+│   │   ├── ocr_engine.py
+│   │   └── plate_reader.py
+│   │
+│   │
+│   ├── matching/                  # Vehicle-plate association
+│   │   ├── iou_matcher.py
+│   │   └── center_matcher.py
+│   │
+│   │
+│   ├── database/
+│   │   ├── database.py
+│   │   ├── models.py
+│   │   └── repository.py
+│   │
+│   │
+│   ├── storage/
+│   │   ├── image_storage.py
+│   │   └── video_storage.py
+│   │
+│   │
+│   └── pipeline/
+│       └── anpr_pipeline.py       # Connects everything
+│
+│
+├── models/
+│   ├── yolo11_vehicle.pt
+│   └── license_plate_detector.pt
+│
+│
+├── data/
+│   ├── input_videos/
+│   ├── output_videos/
+│   └── plate_crops/
+│
+│
+├── logs/
+│   └── anpr.log
+│
+│
+├── database/
+│   └── anpr.db
+│
+│
+├── tests/
+│   ├── test_detector.py
+│   ├── test_ocr.py
+│   └── test_matcher.py
+│
+│
+├── requirements.txt
+├── .env
+├── README.md
+└── .gitignore

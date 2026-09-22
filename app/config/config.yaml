@@ -1,0 +1,38 @@
+# Relative file paths are resolved against the repository root.
+detection:
+  vehicle_model: models/yolo11n.pt
+  plate_model: models/best.pt
+  vehicle_confidence: 0.25
+  plate_confidence: 0.25
+  iou_threshold: 0.7
+  device: cpu
+
+tracking:
+  tracker: bytetrack.yaml # Alternative: botsort.yaml
+
+matching:
+  method: center # Alternative: iou
+  iou_threshold: 0.1
+
+video:
+  source: data/videos/input/car_detection_2lane.mp4 # Integer camera index or RTSP/HTTP URL also supported
+  output_dir: data/videos/output
+  save_output: true
+
+ocr:
+  language: en
+  confidence: 0.5
+  device: cpu
+
+storage:
+  plate_dir: data/plates
+
+database:
+  path: database/anpr.db
+
+logging:
+  log_file: logs/anpr.log
+  level: INFO
+  max_bytes: 5242880
+  backup_count: 3
+  console: true

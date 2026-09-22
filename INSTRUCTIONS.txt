@@ -1,0 +1,647 @@
+This explains the **goal, architecture, technology choices, workflow, and rules**. It should not go into individual file implementation details yet.
+
+Create:
+
+```text
+ANPR_Project/
+└── PROJECT_INSTRUCTIONS.md
+```
+
+Use this:
+
+```md
+# ANPR (Automatic Number Plate Recognition) System
+## Project Instructions & Development Guidelines
+
+
+# 1. Project Goal
+
+The goal of this project is to build a production-style Automatic Number Plate Recognition (ANPR) system using modern Computer Vision and Deep Learning techniques.
+
+The system should be able to:
+
+1. Detect vehicles from video streams.
+2. Track each vehicle with a unique ID.
+3. Detect license plates from vehicles.
+4. Associate each license plate with the correct vehicle.
+5. Extract license plate text using OCR.
+6. Store detection information in a database.
+7. Provide a clean, scalable, and maintainable software architecture.
+
+The final system should work as a real-world traffic monitoring solution.
+
+
+---
+
+# 2. System Overview
+
+The complete AI pipeline:
+
+```
+
+Input Video / CCTV Camera
+
+```
+        |
+        ↓
+```
+
+Vehicle Detection
+(YOLO11)
+
+```
+        |
+        ↓
+```
+
+Vehicle Tracking
+(ByteTrack / BoT-SORT)
+
+```
+        |
+        ↓
+```
+
+Vehicle ID Assignment
+
+```
+        |
+        ↓
+```
+
+License Plate Detection
+(Custom YOLO11 Model)
+
+```
+        |
+        ↓
+```
+
+Vehicle ↔ License Plate Matching
+
+```
+        |
+        ↓
+```
+
+License Plate Cropping
+
+```
+        |
+        ↓
+```
+
+OCR Recognition
+(PaddleOCR)
+
+```
+        |
+        ↓
+```
+
+Database Storage
+
+```
+        |
+        ↓
+```
+
+Logs / Reports
+
+```
+
+
+---
+
+# 3. Technology Stack
+
+## Computer Vision
+
+- Python
+- OpenCV
+- YOLO11
+- ByteTrack / BoT-SORT
+
+
+## Object Detection
+
+Two YOLO models will be used:
+
+### Vehicle Detection Model
+
+Purpose:
+
+Detect:
+
+- Car
+- Truck
+- Bus
+- Motorcycle
+- Other vehicles
+
+
+Model:
+
+```
+
+YOLO11 pretrained model
+
+```
+
+
+### License Plate Detection Model
+
+Purpose:
+
+Detect:
+
+```
+
+License Plate
+
+```
+
+Model:
+
+```
+
+Custom trained YOLO11 model
+
+```
+
+Location:
+
+```
+
+models/license_plate_detector.pt
+
+```
+
+
+---
+
+# 4. Tracking System
+
+The tracking system maintains vehicle identity across video frames.
+
+Example:
+
+Frame 1:
+
+```
+
+Car detected
+
+Vehicle ID: 5
+
+```
+
+
+Frame 100:
+
+```
+
+Same vehicle
+
+Vehicle ID: 5
+
+```
+
+
+Primary tracker:
+
+```
+
+ByteTrack
+
+```
+
+
+Optional advanced tracker:
+
+```
+
+BoT-SORT
+
+```
+
+
+---
+
+# 5. Vehicle and Plate Association
+
+The system must determine:
+
+"Which license plate belongs to which vehicle?"
+
+
+Approach:
+
+1. Detect vehicle bounding boxes.
+2. Detect license plate bounding boxes.
+3. Compare their positions.
+4. Assign plate to vehicle ID.
+
+
+Matching methods:
+
+- Center point matching
+- IoU matching
+
+
+Example:
+
+
+```
+
+Vehicle ID: 10
+
+```
+    |
+    ↓
+```
+
+License Plate:
+DHAKA-1234
+
+```
+
+
+---
+
+# 6. OCR System
+
+The OCR module converts the detected plate image into text.
+
+
+Input:
+
+```
+
+Cropped license plate image
+
+```
+
+
+Output:
+
+```
+
+DHAKA-1234
+
+```
+
+
+OCR Engine:
+
+```
+
+PaddleOCR
+
+```
+
+
+---
+
+# 7. Database System
+
+Phase 1 database:
+
+```
+
+SQLite
+
+```
+
+
+The database stores:
+
+```
+
+Vehicle ID
+
+License Plate Number
+
+Detection Confidence
+
+Timestamp
+
+Image Path
+
+Video Source
+
+```
+
+
+The database layer must use a repository pattern.
+
+Do not place database queries inside AI modules.
+
+
+---
+
+# 8. Production Style Architecture
+
+
+Project structure:
+
+
+```
+
+ANPR_Project/
+
+│
+├── app/
+│
+│   ├── main.py
+│
+│   ├── config/
+│   │   ├── settings.py
+│   │   └── config.yaml
+│
+│   ├── core/
+│   │   ├── logger.py
+│   │   ├── exceptions.py
+│   │   └── constants.py
+│
+│   ├── detection/
+│   │   ├── vehicle_detector.py
+│   │   └── plate_detector.py
+│
+│   ├── tracking/
+│   │   ├── tracker.py
+│   │   └── vehicle_tracker.py
+│
+│   ├── recognition/
+│   │   ├── ocr_engine.py
+│   │   └── plate_reader.py
+│
+│   ├── matching/
+│   │   ├── iou_matcher.py
+│   │   └── center_matcher.py
+│
+│   ├── database/
+│   │   ├── database.py
+│   │   ├── models.py
+│   │   └── repository.py
+│
+│   ├── storage/
+│   │   ├── image_storage.py
+│   │   └── video_storage.py
+│
+│   ├── utils/
+│   │   ├── bbox_utils.py
+│   │   ├── image_utils.py
+│   │   └── video_utils.py
+│
+│   └── pipeline/
+│       └── anpr_pipeline.py
+│
+│
+├── models/
+│   ├── yolo11_vehicle.pt
+│   └── license_plate_detector.pt
+│
+│
+├── data/
+│   ├── input_videos/
+│   ├── output_videos/
+│   └── plate_crops/
+│
+│
+├── database/
+│   └── anpr.db
+│
+│
+├── logs/
+│   └── anpr.log
+│
+│
+├── tests/
+│
+├── requirements.txt
+├── .env
+├── README.md
+└── .gitignore
+
+```
+
+
+---
+
+# 9. Development Principles
+
+
+## Clean Architecture
+
+Each module should have only one responsibility.
+
+
+Example:
+
+
+Vehicle detector:
+
+Responsible for:
+
+```
+
+Image → Vehicle Detection
+
+```
+
+
+It should NOT:
+
+- Save database data
+- Run OCR
+- Handle tracking
+
+
+---
+
+# 10. Configuration Management
+
+Do not hardcode:
+
+- Model paths
+- Confidence values
+- Video paths
+- Database paths
+
+
+All configurations should be stored in:
+
+
+```
+
+config/config.yaml
+
+```
+
+
+Sensitive values:
+
+```
+
+.env
+
+```
+
+
+---
+
+# 11. Logging
+
+The system must use logging instead of print statements.
+
+
+Example:
+
+
+```
+
+INFO:
+Vehicle detector loaded
+
+INFO:
+Plate detected
+
+ERROR:
+OCR failed
+
+```
+
+
+Logs location:
+
+```
+
+logs/anpr.log
+
+```
+
+
+---
+
+# 12. Error Handling
+
+The system should handle:
+
+
+- Missing model files
+- Invalid video input
+- Camera failure
+- OCR failure
+- Database errors
+
+
+Use custom exceptions.
+
+
+---
+
+# 13. Testing
+
+Important modules must have tests.
+
+
+Example:
+
+
+```
+
+tests/
+
+test_detector.py
+
+test_tracker.py
+
+test_matcher.py
+
+test_ocr.py
+
+```
+
+
+---
+
+# 14. Development Roadmap
+
+
+## Phase 1: Core ANPR System
+
+Implement:
+
+✅ Project structure
+
+✅ Configuration system
+
+✅ Logging
+
+✅ Exception handling
+
+✅ Vehicle detection
+
+✅ Vehicle tracking
+
+✅ License plate detection
+
+✅ Plate matching
+
+✅ OCR extraction
+
+✅ SQLite storage
+
+
+
+---
+
+## Phase 2: Backend System
+
+Add:
+
+- FastAPI
+- PostgreSQL
+- REST API
+- Authentication
+
+
+---
+
+## Phase 3: Production Deployment
+
+Add:
+
+- Multiple CCTV streams
+- Real-time dashboard
+- Cloud deployment
+- Monitoring
+- User management
+
+
+---
+
+# 15. Coding Rules
+
+Always:
+
+- Write modular code.
+- Use classes where appropriate.
+- Use type hints.
+- Add docstrings.
+- Avoid duplicated code.
+- Keep AI modules independent.
+- Follow the existing architecture.
+
+
+The final objective is to create a scalable, maintainable, production-quality ANPR system similar to a real intelligent traffic monitoring platform.
+```
+
+This file gives Codex the **complete vision of the project**. Then we can separately give Codex smaller instructions like:
+
+* "Implement configuration module"
+* "Create YOLO vehicle detector"
+* "Implement ByteTrack wrapper"
+
+This prevents Codex from randomly creating files or mixing responsibilities.

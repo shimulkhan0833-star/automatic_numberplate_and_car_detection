@@ -1,0 +1,46 @@
+Phase 1
+
+✅ YOLO11 Vehicle Detection
+✅ YOLO11 Plate Detection
+✅ ByteTrack
+✅ PaddleOCR
+✅ SQLite
+✅ Logging
+✅ Config
+
+Video Input
+     |
+     ↓
+YOLO11 Vehicle Detection
+     |
+     ↓
+ByteTrack Vehicle Tracking
+     |
+     ↓
+YOLO11 License Plate Detection
+     |
+     ↓
+Vehicle ↔ Plate Matching
+     |
+     ↓
+PaddleOCR Text Extraction
+     |
+     ↓
+SQLite Database
+     |
+     ↓
+Logs
+
+
+Phase 2
+
+✅ FastAPI
+✅ PostgreSQL
+✅ Dashboard
+✅ Authentication
+
+Phase 3
+
+✅ Multiple CCTV streams
+✅ Speed detection
+✅ Violation detection

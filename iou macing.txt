@@ -1,0 +1,569 @@
+**IoU (Intersection over Union) Matching** is a method to decide whether two bounding boxes belong to the same object by measuring how much they overlap.
+
+In your ANPR project, it is used to answer:
+
+> "Does this detected license plate belong to this detected car?"
+
+---
+
+## 1. Bounding Boxes
+
+YOLO gives bounding boxes.
+
+Example: Vehicle detector output:
+
+```text
+Car ID: 1
+
+Box:
+x1 = 100
+y1 = 100
+x2 = 600
+y2 = 500
+```
+
+Visual:
+
+```text
++--------------------------------+
+|                                |
+|          CAR                   |
+|                                |
+|                                |
+|                                |
++--------------------------------+
+```
+
+---
+
+License plate detector output:
+
+```text
+Plate:
+
+x1 = 300
+y1 = 400
+x2 = 450
+y2 = 450
+```
+
+Visual:
+
+```text
+Car Box
+
++--------------------------------+
+|                                |
+|                                |
+|          +-----------+         |
+|          |  PLATE    |         |
+|          +-----------+         |
+|                                |
++--------------------------------+
+```
+
+The plate is inside the car.
+
+---
+
+# 2. What is IoU?
+
+IoU means:
+
+```
+Intersection over Union
+```
+
+Formula:
+
+$$
+IoU = \frac{Area\ of\ Overlap}{Area\ of\ Combined\ Boxes}
+$$
+
+In simple words:
+
+```
+How much do these two boxes overlap?
+```
+
+---
+
+## Example
+
+Box A (Car):
+
+```
+Area = 1000 pixels
+```
+
+Box B (Plate):
+
+```
+Area = 100 pixels
+```
+
+Overlap:
+
+```
+Area = 100 pixels
+```
+
+IoU:
+
+```
+100 / (1000 + 100 - 100)
+
+= 100 / 1000
+
+= 0.1
+```
+
+IoU = 0.1
+
+---
+
+## Important point
+
+For vehicle + plate matching, normal IoU is not always enough.
+
+Why?
+
+Because the plate is a **small object inside a large object**.
+
+Example:
+
+```
+Car box:
+
++-----------------------+
+|                       |
+|                       |
+|     +---------+       |
+|     | Plate   |       |
+|     +---------+       |
+|                       |
++-----------------------+
+```
+
+The overlap area is small compared to the car area.
+
+So IoU may be low:
+
+```
+IoU = 0.05
+```
+
+but the plate clearly belongs to that car.
+
+---
+
+# Better Method for ANPR: Center Point Matching
+
+For license plates, many systems use:
+
+## Check if plate center is inside vehicle box
+
+Calculate plate center:
+
+```
+plate_center_x = (x1+x2)/2
+
+plate_center_y = (y1+y2)/2
+```
+
+Example:
+
+Plate:
+
+```
+x1=300
+x2=450
+
+center_x = 375
+
+
+y1=400
+y2=450
+
+center_y = 425
+```
+
+Now check:
+
+```
+Is (375,425) inside car box?
+```
+
+Car:
+
+```
+x1=100
+x2=600
+
+y1=100
+y2=500
+```
+
+Yes.
+
+Therefore:
+
+```
+Plate → Car ID 1
+```
+
+---
+
+# Practical ANPR Matching
+
+The pipeline:
+
+```
+Frame
+ |
+ |
+ ↓
+
+YOLO Vehicle Detector
+
+Output:
+
+Car ID 5
+Box:
+[100,100,600,500]
+
+
+        +
+
+YOLO Plate Detector
+
+Output:
+
+Plate
+Box:
+[300,400,450,450]
+
+
+        ↓
+
+Center Point Matching
+
+        ↓
+
+Plate belongs to Car ID 5
+
+        ↓
+
+OCR
+
+        ↓
+
+DHAKA-1234
+```
+
+---
+
+# Code Example
+
+```python
+def is_inside(vehicle_box, plate_box):
+
+    vx1, vy1, vx2, vy2 = vehicle_box
+
+    px1, py1, px2, py2 = plate_box
+
+
+    plate_center_x = (px1 + px2) / 2
+    plate_center_y = (py1 + py2) / 2
+
+
+    if (
+        vx1 < plate_center_x < vx2
+        and
+        vy1 < plate_center_y < vy2
+    ):
+        return True
+
+    return False
+```
+
+Usage:
+
+```python
+if is_inside(car_box, plate_box):
+
+    print(
+        "Plate belongs to this car"
+    )
+```
+
+---
+
+## For your ANPR project I recommend:
+
+Use:
+
+```
+YOLO11 Vehicle Detection
+        +
+ByteTrack / BoT-SORT
+        +
+Center point matching
+        +
+YOLO11 License Plate Detection
+        +
+PaddleOCR
+```
+
+For vehicle-to-plate association, **center point matching is usually better than pure IoU** because license plates are small compared to vehicles.
+
+
+#################################################################################################################################
+
+Video Frame (Frame 100)
+          |
+          |
+   ┌──────┴──────┐
+   ↓             ↓
+
+YOLO Vehicle   YOLO Plate
+Detector       Detector
+
+   ↓             ↓
+
+Car Box        Plate Box
+
+[100,100,600,500]   [300,400,450,450]
+
+          |
+          ↓
+
+   is_inside(vehicle_box, plate_box)
+
+          |
+          ↓
+
+Plate belongs to Car
+
+##################################################################
+
+
+`plate_center_x` and `plate_center_y` locate the **center point of the license plate bounding box**.
+
+YOLO gives a bounding box like this:
+
+```text
+(x1, y1) ----------------
+       |                |
+       |   License      |
+       |   Plate        |
+       |                |
+       ---------------- (x2, y2)
+```
+
+Where:
+
+```text
+px1, py1 = top-left corner
+px2, py2 = bottom-right corner
+```
+
+---
+
+## Example
+
+Suppose YOLO detects a license plate:
+
+```python
+plate_box = [
+    300, 400, 500, 460
+]
+```
+
+Meaning:
+
+```text
+px1 = 300
+py1 = 400
+
+px2 = 500
+py2 = 460
+```
+
+Visual:
+
+```text
+Image coordinate system:
+
+(0,0)
+  |
+  |
+  ↓
+
++--------------------------------+
+|                                |
+|                                |
+|       (300,400)                |
+|          +----------------+    |
+|          |                |    |
+|          |    PLATE       |    |
+|          |                |    |
+|          +----------------+    |
+|                       (500,460)|
+|                                |
++--------------------------------+
+```
+
+---
+
+## Calculate center
+
+X coordinate:
+
+```python
+plate_center_x = (px1 + px2) / 2
+```
+
+So:
+
+```python
+(300 + 500) / 2
+
+= 400
+```
+
+Y coordinate:
+
+```python
+plate_center_y = (py1 + py2) / 2
+```
+
+So:
+
+```python
+(400 + 460) / 2
+
+= 430
+```
+
+The center point is:
+
+```text
+(400, 430)
+```
+
+---
+
+## Visual representation
+
+```text
+             y
+             |
+             |
+     (300,400)
+          +----------------+
+          |                |
+          |                |
+          |      ●         |  ← center (400,430)
+          |                |
+          |                |
+          +----------------+
+                         (500,460)
+
+              x →
+```
+
+The `●` is the exact center of the detected plate.
+
+---
+
+## Why do we need the center?
+
+Because we want to check:
+
+> Is this plate center inside a vehicle bounding box?
+
+Example:
+
+Vehicle box:
+
+```text
+x1=100
+y1=200
+x2=700
+y2=700
+```
+
+Plate center:
+
+```text
+(400,430)
+```
+
+Check:
+
+```python
+100 < 400 < 700
+```
+
+and:
+
+```python
+200 < 430 < 700
+```
+
+Both are true.
+
+Therefore:
+
+```text
+Plate belongs to this vehicle ✅
+```
+
+---
+
+## In computer vision terms
+
+The coordinates are **pixel coordinates**.
+
+Example:
+
+A 1920×1080 video:
+
+```text
+Width  = 1920 pixels
+Height = 1080 pixels
+```
+
+A detected plate:
+
+```text
+Top-left:
+(800,600)
+
+Bottom-right:
+(1100,700)
+```
+
+Center:
+
+```text
+(950,650)
+```
+
+means:
+
+> The center of the plate is located 950 pixels from the left and 650 pixels from the top of the image.
+
+---
+
+So in your ANPR system:
+
+* YOLO vehicle model → gives vehicle bounding box
+* YOLO plate model → gives plate bounding box
+* Calculate plate center
+* Check if that center lies inside a vehicle box
+* Assign plate → vehicle ID
+
+This is the matching logic.
+
