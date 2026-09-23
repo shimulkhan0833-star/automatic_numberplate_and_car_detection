@@ -30,8 +30,43 @@ SQLite Database
      |
      ↓
 Logs
+------------------------------------------------
+app/main.py
+    │
+    ▼
+ANPRPipeline.run()
+    │
+    ├── Load settings and configure logging
+    ├── Create a unique session ID
+    ├── Open video, models, and database
+    │
+    ▼
+Read one video frame
+    │
+    ├── Vehicle detection + tracking
+    │       tracker.py → vehicle_tracker.py
+    │
+    ├── Plate detection
+    │       plate_detector.py
+    │
+    ▼
+Match plates to tracked vehicles
+    matcher.py
+    │
+    ▼
+Crop plates and read text when needed
+    plate_reader.py → ocr_engine.py
+    │
+    ▼
+Save vehicle records, best OCR results, and plate images
+    repository.py → SQLite + data/plates
+    │
+    ▼
+Draw labels → Preview → Optionally save annotated video
+    │
+    └── Read the next frame and repeat
 
-
+-----------------------------------------------------------------------------
 Phase 2
 
 ✅ FastAPI

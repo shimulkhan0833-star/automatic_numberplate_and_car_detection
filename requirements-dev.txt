@@ -1,0 +1,2 @@
+# Install runtime requirements first; HTTP client for API tests.
+httpx>=0.27,<1

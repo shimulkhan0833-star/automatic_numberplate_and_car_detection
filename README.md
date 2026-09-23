@@ -229,3 +229,38 @@ Superseded images remain on disk; the record points to the newest best image.
 New files are removed if the database transaction fails. A process crash between
 file creation and database commit can leave an unreferenced image. Crop saving
 also runs in the preview script, independently of annotated video saving.
+
+## Phase 2: read-only FastAPI backend
+
+Run from the repository root in your Python environment:
+
+```powershell
+python -m pip install -r requirements.txt
+python -m uvicorn app.api.app:app --reload
+```
+
+Open http://127.0.0.1:8000/docs to try the API. All routes and explanatory
+comments are in `app/api/app.py`. Starting the server prepares/migrates the
+SQLite schema but does not load models or run video processing.
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| GET | `/health` | Database health check |
+| GET | `/vehicles` | Paginated vehicle search |
+| GET | `/vehicles/{session_id}/{vehicle_id}` | Vehicle details |
+| GET | `/vehicles/{session_id}/{vehicle_id}/plate-image` | Saved PNG crop |
+| GET | `/sessions` | Paginated session summaries |
+| GET | `/sessions/{session_id}` | Session counts and observation times |
+
+Vehicle filters: `session_id`, `plate_text` (literal substring), `vehicle_type`,
+`has_plate`, `date_from`, and `date_to` (inclusive first-seen UTC dates).
+List routes accept `limit` (1?200) and `offset` (0 or greater).
+Missing records/images return 404; invalid parameters return 422; database
+query failures return 503. Images are restricted to the configured plate folder.
+
+Sessions are derived from vehicle records: empty runs, processing status, and
+output video links are not represented yet. Background jobs and authentication
+are not implemented; the default command serves locally on 127.0.0.1.
+
+Install `requirements-dev.txt` as well to run the API tests, then use
+`python -m unittest discover -s tests`. Tests use temporary databases and images.

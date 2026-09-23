@@ -1,4 +1,75 @@
+# Local secrets (keep shareable templates)
 .env
+.env.*
+!.env.example
+!.env.template
+
+# Python bytecode and virtual environments
 __pycache__/
 *.py[cod]
+.venv/
+venv/
+env/
 .test-deps/
+
+# Test, coverage, and tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Python build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Local IDE and operating system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+
+# Local datasets, plate crops, and input/output videos
+/data/**
+!/data/**/
+!/data/**/.gitkeep
+
+# Downloaded or trained model artifacts
+/models/**
+!/models/**/
+!/models/**/.gitkeep
+/runs/
+
+# Runtime database files, including SQLite journal/WAL files
+/database/**
+!/database/**/
+!/database/**/.gitkeep
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Application logs
+/logs/**
+!/logs/**/
+!/logs/**/.gitkeep
+*.log
+*.log.*
