@@ -2,7 +2,7 @@
 
 Usage::
 
-    detector = VehicleDetector(load_settings().detection)
+    detector = VehicleDetector()
     detections = detector.detect(frame)  # OpenCV BGR uint8 frame
 
 This module does not read videos, track objects, run OCR, or save results.
@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -23,8 +22,7 @@ from app.core.exceptions import (
 )
 from app.core.logger import get_logger
 
-if TYPE_CHECKING:
-    from app.config.settings import DetectionSettings
+from app.config import settings
 
 
 _CLASS_NAMES = {0: "person", 2: "car", 3: "motorcycle", 5: "bus", 7: "truck"}
@@ -44,16 +42,15 @@ class Detection:
 class VehicleDetector:
     """Load a COCO detection model once and detect the five selected classes.
 
-    Supply validated DetectionSettings from load_settings(). Model weights must
+    Model weights configured in settings.py must
     already exist locally. Use a separate instance for each inference worker.
     People are returned with their own class ID so later plate association can
     exclude them. Failures retain their cause for logging by the caller.
     """
 
-    def __init__(self, settings: DetectionSettings) -> None:
+    def __init__(self) -> None:
         """Load local weights and verify the expected COCO class mapping."""
-        self._settings = settings
-        model_path = Path(settings.vehicle_model)
+        model_path = Path(settings.VEHICLE_MODEL_PATH)
         if not model_path.is_file():
             raise ModelNotFoundException(f"Vehicle model file not found: {model_path}")
 
@@ -69,7 +66,7 @@ class VehicleDetector:
         except Exception as exc:
             raise ModelException(f"Cannot initialize vehicle detector from {model_path}") from exc
 
-        logger.info("Vehicle detector loaded: %s (device=%s)", model_path, settings.device)
+        logger.info("Vehicle detector loaded: %s (device=%s)", model_path, settings.DEVICE)
 
     def detect(self, frame: np.ndarray) -> list[Detection]:
         """Detect objects in one nonempty HWC BGR uint8 frame.
@@ -90,9 +87,9 @@ class VehicleDetector:
         try:
             results = self._model.predict(
                 source=frame,
-                conf=self._settings.vehicle_confidence,
-                iou=self._settings.iou_threshold,
-                device=self._settings.device,
+                conf=settings.VEHICLE_CONFIDENCE,
+                iou=settings.IOU_THRESHOLD,
+                device=settings.DEVICE,
                 classes=list(_CLASS_NAMES),
                 verbose=False,
                 save=False,

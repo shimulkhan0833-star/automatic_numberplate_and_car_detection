@@ -1,4 +1,4 @@
-# Relative file paths are resolved against the repository root.
+# Run from the repository root; relative paths use the working directory.
 detection:
   vehicle_model: models/yolo11n.pt
   plate_model: models/best.pt
@@ -15,7 +15,7 @@ matching:
   iou_threshold: 0.1
 
 video:
-  source: data/videos/input/car_detection_2lane.mp4 # Integer camera index or RTSP/HTTP URL also supported
+  source: data\videos\input\carLicence4.mp4 # Integer camera index or RTSP/HTTP URL also supported
   output_dir: data/videos/output
   save_output: true
 
@@ -23,6 +23,11 @@ ocr:
   language: en
   confidence: 0.5
   device: cpu
+  detection_model: PP-OCRv5_mobile_det
+  recognition_model: en_PP-OCRv5_mobile_rec
+  retry_frames: 15
+  refresh_frames: 150
+  cache_ttl_frames: 300
 
 storage:
   plate_dir: data/plates

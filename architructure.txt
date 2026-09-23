@@ -140,3 +140,15 @@ ANPR_Project/
 ├── .env
 ├── README.md
 └── .gitignore
+
+
+I suggest this order:
+1. Implement ANPRPipeline
+   Move the processing flow from test_video.py into a reusable class so python -m app.main runs the application.
+2. Save recognized plates to SQLite
+   Store the video/session ID, vehicle tracking ID, plate text, confidence, and timestamp. Avoid inserting the same vehicle on every frame.
+3. Save plate crops and annotated video
+   Use the existing output settings in config.yaml.
+4. Verify with a short video
+   Check tracking consistency, plate-to-vehicle matching, OCR accuracy, and saved records.
+Start with ANPRPipeline, then add database

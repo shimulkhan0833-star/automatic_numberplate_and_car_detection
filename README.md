@@ -5,10 +5,38 @@ and database storage from video or CCTV streams.
 
 ## Current status
 
-Implemented: project scaffolding, rotating file and console logging, shared
-exceptions, validated YAML configuration, and tests. Detection, tracking, matching, OCR,
-database access, and pipeline files are placeholders. `app/main.py` is empty;
-end-to-end video processing is not available yet.
+Implemented: YAML settings, logging, vehicle tracking, plate detection,
+vehicle-to-plate matching, OCR with per-vehicle caching, and ANPRPipeline.
+The pipeline can preview results and save annotated video. SQLite recognition storage is implemented;
+best-reading plate crops are saved as PNG images. Pipeline tests mock inference and
+video devices; they do not verify real model accuracy or installed codecs.
+
+## Run the pipeline
+
+From the repository root, configure `app/config/config.yaml`, then run:
+
+```powershell
+python -m app.main
+```
+
+Press Q or close the preview window to stop. When `video.save_output` is true,
+a uniquely named MP4 is written to `video.output_dir`. For preview only, use
+`python test_video.py`.
+
+For processing without a preview window:
+
+```python
+from app.pipeline.anpr_pipeline import ANPRPipeline
+
+pipeline = ANPRPipeline(display=False)
+frame_count = pipeline.run()
+print(frame_count, pipeline.output_path)
+```
+
+Each run creates fresh tracking and OCR cache state. Sources can be video paths,
+camera indices, or RTSP/HTTP URLs. A failed read after processing frames ends the
+run; automatic stream reconnection is not implemented. Output uses the reported
+source FPS, or 30 FPS when unavailable.
 
 ## Planned pipeline
 
@@ -96,33 +124,26 @@ The vehicle detector will use pretrained YOLO11 weights. The plate detector
 uses the custom-trained weights at `models/best.pt`.
 Installing dependencies does not supply the custom plate model.
 
-Configuration lives in `app/config/config.yaml`, loaded through
-`app/config/settings.py`. Keep model paths, confidence thresholds, video paths,
-and database paths in YAML, and sensitive values in `.env`.
+Configuration lives in `app/config/config.yaml`. `app/config/settings.py`
+reads it once on import and exposes uppercase constants such as
+`VEHICLE_MODEL_PATH`, `PLATE_CONFIDENCE`, and `DATABASE_PATH`.
 
 ```python
-from dataclasses import asdict
-from app.config.settings import load_settings
+from app.config import settings
 from app.core.logger import setup_logging
 
-settings = load_settings()
-setup_logging(**asdict(settings.logging))
+setup_logging(settings.LOG_FILE, level=settings.LOG_LEVEL,
+              max_bytes=settings.LOG_MAX_BYTES,
+              backup_count=settings.LOG_BACKUP_COUNT,
+              console=settings.LOG_CONSOLE)
 ```
 
-Paths resolve against the repository root, independently of the working
-directory. The loader validates required sections, keys, types, thresholds,
-tracker names, and log settings, raising `ConfigurationException` on errors.
-It does not create output directories or require model/video files to exist.
-`sample.mp4` is a placeholder: set `video.source` to your video, an integer
-camera index such as `0`, or an RTSP/HTTP URL. OCR defaults to English;
-choose a language supported by your OCR model for your plates.
-
-For a private camera URL, set `video.source: "${ANPR_VIDEO_SOURCE}"` in YAML
-and `ANPR_VIDEO_SOURCE=rtsp://user:password@camera/live` in the root `.env`.
-Process environment values take precedence over `.env`; missing referenced
-variables raise an error. Loading does not modify the process environment.
-Substitutions remain strings; put numeric and boolean options directly in YAML.
-The `.env` file is optional and excluded from Git.
+Run commands from the repository root: configuration and relative file paths
+use the current working directory. Restart the application after editing YAML.
+Set `video.source` to a local video path, camera index such as `0`, or RTSP/HTTP
+URL. Put numeric and boolean options directly in YAML. This simple configuration
+module does not load `.env`, expand environment placeholders, or perform schema
+validation. OCR model names determine the recognition language.
 
 ## Logging and exceptions
 
@@ -147,7 +168,7 @@ and storage errors. Preserve causes with `raise OCRException(message) from exc`.
 
 ## Tests
 
-Tests use unittest. Configuration tests require only PyYAML and python-dotenv,
+Tests use unittest. Configuration tests require only PyYAML,
 without AI dependencies:
 
 ```powershell
@@ -169,3 +190,42 @@ layer and AI modules independent.
 - Phase 2: FastAPI, PostgreSQL, REST API, and authentication.
 - Phase 3: multiple CCTV streams, dashboard, cloud deployment, monitoring,
   and user management.
+
+## Recognition database
+
+The pipeline creates the SQLite file at `database.path` automatically and writes
+`plate_recognitions` after OCR. Each run has a new `pipeline.session_id`.
+All tracked cars, motorcycles, buses, and trucks are stored, even without a
+readable plate. People are excluded. Plate text, OCR confidence, and the best
+reading timestamp stay NULL until recognition succeeds. Vehicle class is stored
+as `class_id` and `class_name`. Existing databases are migrated automatically
+on connection, preserving their records (old records have unknown vehicle class).
+
+The primary key `(session_id, vehicle_id)` prevents duplicate rows per frame
+and separates tracking IDs from different runs. Unmatched and unreadable OCR results do not overwrite vehicle records. A higher-confidence reading replaces the text, confidence, and
+video timestamp; equal confidence retains the previous reading.
+
+`first_seen` and `last_seen` are UTC processing times when the tracked vehicle
+is observed, including frames without a readable plate. Previously stored records
+retain their original observation times; earlier missing vehicles cannot be recovered
+without processing the video again.
+`video_timestamp` is the best reading's position in seconds: frame index / FPS
+for files (30 FPS fallback), and elapsed processing time for live sources.
+It is approximate for variable-frame-rate files and buffered live streams.
+Each frame's writes commit together; a database failure stops processing and is
+logged. The preview runner also saves recognition records, though it disables
+annotated video output. Fresh best-reading plate crops are saved as PNG images.
+
+### Plate images
+
+`storage.plate_dir` (normally `data/plates`) contains PNG crops from fresh OCR
+results that improve the saved confidence. Filenames include session ID, vehicle
+ID, and a unique suffix. SQLite `image_path` points to the crop that produced the
+saved text. Cached, lower-confidence, and equal-confidence readings do not write
+another image. Unreadable/unmatched plates and vehicles without plates have no
+image path. Existing databases gain the nullable column automatically on startup.
+
+Superseded images remain on disk; the record points to the newest best image.
+New files are removed if the database transaction fails. A process crash between
+file creation and database commit can leave an unreferenced image. Crop saving
+also runs in the preview script, independently of annotated video saving.
